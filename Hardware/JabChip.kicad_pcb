@@ -2450,6 +2450,7 @@
 		(property "Reference" "SW2"
 			(at 0.15 -2.6 0)
 			(layer "F.SilkS")
+			(hide yes)
 			(uuid "488f6343-4a2a-49b8-a0d8-b51524fa33dc")
 			(effects
 				(font
@@ -5573,7 +5574,7 @@
 		(at 130.1316 63.0854)
 		(descr "https://katalog.we-online.com/em/datasheet/434133025816.pdf")
 		(tags "tactile switch Wurth Wuerth")
-		(property "Reference" "SW1"
+		(property "Reference" "BOOT"
 			(at 0 2.7514 0)
 			(layer "F.SilkS")
 			(uuid "b91529be-fd17-498e-b3f2-14111a034d47")
