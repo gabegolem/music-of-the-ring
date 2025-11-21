@@ -4,7 +4,7 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-int test_led;
+int piezo_pin = A0;
 
 typedef struct __attribute__((packed)) struct_readings {
     double acceleration_x;
@@ -25,7 +25,6 @@ char * gyro_y_bytes;
 // Laptop's MAC Address (replace with the actual MAC address)
 const char* ssid = "bucknell_iot";
 uint8_t broadcastAddress[] = {0xdc, 0x21, 0x48, 0x82, 0x96, 0x82}; //mac address
-unsigned char hostbytes[4] = {10,98,148,138};
 const char* host = "10.98.148.138";//implement automatic grabbing of laptop ip
 const uint16_t port = 8000;
 bool itison = false;
@@ -60,9 +59,6 @@ void displaySensorDetails(void) {
 
 void setup(void) {
   Serial.begin(115200);
-
-  test_led = 13;
-  pinMode(13, OUTPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid);
@@ -105,6 +101,13 @@ void loop(void) {
     return;
   }
 
+  WiFiClient client;
+  if (!client.connect(host, port)) {
+    Serial.println("Connection Failed");
+    delay(1000);
+    return;
+  }
+
   sensors_event_t event;
   imu.getEvent(&event);
 
@@ -116,23 +119,16 @@ void loop(void) {
   readings.acceleration_x = event.acceleration.x;
   readings.acceleration_y = event.acceleration.y;
   readings.acceleration_z = event.acceleration.z;
-  readings.piezo = 0;
-
+  readings.piezo = analogRead(piezo_pin);
+  Serial.print("O");
+  Serial.println(readings.piezo);
   readings_bytes = reinterpret_cast<char*>(&readings);
-
-  WiFiClient client;
-  if (!client.connect(hostbytes, port)) {
-    Serial.println("Connection Failed");
-    delay(1000);
-    return;
-  }
-
+  
   while(client.available() > 0 || client.connected()>0) {
     //client.write(readings_bytes, sizeof(double) * 7);
     client.write(readings_bytes, 56);
   }
-
-  delay(10);
+  delay(50);
   /* Get a new sensor event */
 }
 
