@@ -5,8 +5,9 @@ from collections import deque
 import time
 
 NUM_READINGS = 40
+NUM_READINGS_AFTER = 10
 PIEZO_THRESHOLD = 1000
-CSV = "../modeling/punch_data/cross.csv"
+CSV = "../modeling/sample.csv" #"../modeling/profiles/test_profile/data/right_hook.csv"
 
 
 format_string = '<7d'
@@ -22,17 +23,7 @@ server_socket.bind(address)
 print("Listening...")
 server_socket.listen(1)
 
-while True:
-    client_socket, client_address = server_socket.accept()
-    print(f"Accepted connection from {client_address}")
-    try:
-        data_bytes = client_socket.recv(56)
-        unpacked_data = struct.unpack(format_string, data_bytes)
-        queue.append(unpacked_data)
-        if (unpacked_data[6] > PIEZO_THRESHOLD):
-            for i in range(len(queue)):
-                csv_writer.writerow(queue[i])
-        '''
+def displayData(unpacked_data): 
         acceleration_x = unpacked_data[0]
         acceleration_y = unpacked_data[1]
         acceleration_z = unpacked_data[2]
@@ -47,9 +38,21 @@ while True:
               \nAcc_z: {acceleration_z}
               \nGyro_x: {gyro_x}
               \nGyro_y: {gyro_y}
-              \nGyro_z: {gyro_z}
-              \nPiezo: {piezo}\n""")
-        '''
+              \nGyro_z: {gyro_zi}
+        """)
+
+while True:
+    client_socket, client_address = server_socket.accept()
+    #print("Accepted")
+    try:
+        data_bytes = client_socket.recv(56)
+        unpacked_data = struct.unpack(format_string, data_bytes)
+        queue.append(unpacked_data)
+        if (queue[-NUM_READINGS_AFTER][6] > PIEZO_THRESHOLD):
+            for i in range(len(queue)):
+                csv_writer.writerow(queue[i])
+
+        #displayData(unpacked_data)
     except Exception as e:
         print(f"Error handling client: {e}")
     finally:

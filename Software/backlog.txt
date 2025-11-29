@@ -1,0 +1,11 @@
+Needs
+1. Punch matching
+2. Music stuffs
+
+Qualtiy of Life / Performance
+1. move from csv to SQL database?
+2. reading data even when punches do not impact
+    requires recongnizing punches in a stream of accelerometers value
+    rather than relying on piezo impact to indicate a punch
+3. refactor directory? 
+    good organization, but messy to navigate with python files
