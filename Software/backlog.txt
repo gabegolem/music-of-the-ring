@@ -1,11 +1,32 @@
 Needs
-1. Punch matching
-2. Music stuffs
 
-Qualtiy of Life / Performance
-1. move from csv to SQL database?
-2. reading data even when punches do not impact
-    requires recongnizing punches in a stream of accelerometers value
-    rather than relying on piezo impact to indicate a punch
-3. refactor directory? 
-    good organization, but messy to navigate with python files
+    data_reading
+    1. reading data even when punches do not impact
+        requires recongnizing punches in a stream of accelerometers value
+        rather than relying on piezo impact to indicate a punch
+        probably not too hard to implement once modelling 
+        is demonstrated to be effective
+    
+Qualtiy of Life
+
+    data_reading
+    1. Rewrite python in c
+        for preformance optimization
+
+    2. Change data_reading from TCP sockets to UDP sockets
+        Speed needs to be prioritized over accuracy, I was simply 
+        more familar with TCP sockets in the beginning
+
+    3. Implement automatic connection to laptop
+
+
+    modeling   
+    1. move from csv to SQL database?
+        csv files are simplest to implement, but require sequential reading
+        and using python (slower 
+
+
+    general
+    1. refactor directory? 
+        good organization, but messy to navigate with python files
+    2. comment/document code
