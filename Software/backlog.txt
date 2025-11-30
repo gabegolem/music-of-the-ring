@@ -30,3 +30,6 @@ Qualtiy of Life
     1. refactor directory? 
         good organization, but messy to navigate with python files
     2. comment/document code
+        helpful
+    3. add constants header
+        so I don't have to manually change each files constants

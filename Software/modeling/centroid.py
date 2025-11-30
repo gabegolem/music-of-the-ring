@@ -1,15 +1,16 @@
 import csv
 
-READINGS_PER_PUNCH = 40 #40
-NUM_PUNCHES = 10        #10 
-PIEZO_THRESHOLD = 1000
-NUM_VALUES = 7
-PUNCH = "right_hook"
-DATA_FILE = "./profiles/test_profile/data/" + PUNCH + ".csv"
-CENTROID_FILE = "./profiles/test_profile/centroids/" + PUNCH + "_centroid.csv"
+READINGS_PER_PUNCH = 25 #40
+NUM_PUNCHES = 10        #Ideally is automatically read 
+NUM_VALUES = 7          #Number of data values (accel, gryo, piezo)
+PUNCH = "right_hook"    #Punch the centroid is being created for
+DATA_FILE = "./profiles/test_profile/data/" + PUNCH + ".csv" #file reading raw data from   
+CENTROID_FILE = "./profiles/test_profile/centroids/" + PUNCH + "_centroid.csv"  #file writing centroid to
 
-csv_file = open(DATA_FILE,'r')
+'''Opens raw data for reading'''
+csv_file = open(DATA_FILE,'r') 
 csv_reader = csv.reader(csv_file)
+
 centroids = [[0] * NUM_VALUES for i in range(READINGS_PER_PUNCH)]
 
 row_total = READINGS_PER_PUNCH * NUM_PUNCHES

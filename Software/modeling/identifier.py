@@ -3,7 +3,7 @@ import os
 import math
 import statistics
 
-READINGS_PER_PUNCH = 40 #40
+READINGS_PER_PUNCH = 25 #40
 NUM_VALUES = 7
 PROFILE = "test_profile"
 CENTROIDS_DIR = "./profiles/" + PROFILE + "/centroids/"

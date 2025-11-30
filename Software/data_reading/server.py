@@ -4,9 +4,9 @@ import csv
 from collections import deque
 import time
 
-NUM_READINGS = 40              #Readings per punch
-NUM_READINGS_AFTER = 10        #Number of readings following impact 
-PIEZO_THRESHOLD = 1000         #Threshold to register/record a punch 
+NUM_READINGS = 25              #Readings per punch
+NUM_READINGS_AFTER = 5        #Number of readings following impact 
+PIEZO_THRESHOLD = 500         #Threshold to register/record a punch 
 CSV = "../modeling/sample.csv" #"../modeling/profiles/test_profile/data/right_hook.csv"
 
 
@@ -21,7 +21,7 @@ csv_writer = csv.writer(csv_file, delimiter=',', lineterminator='\n')
 
 '''Sets up tcp socket communication'''
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-address = ("10.0.0.210", 8000)
+address = ("10.98.148.138", 8000)
 server_socket.bind(address)
 print("Listening...")
 server_socket.listen(1)

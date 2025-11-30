@@ -22,9 +22,9 @@ struct_readings readings;
 char * readings_bytes;
 
 //Network Info
-const char* ssid = "Home524";
-const char* pword = "Home7777";
-const char* host = "10.0.0.210"; 
+const char* ssid = "bucknell_iot";
+const char* pword = "";
+const char* host = "10.98.148.138"; 
 const uint16_t port = 8000;
 uint8_t broadcastAddress[] = {0xdc, 0x21, 0x48, 0x82, 0x96, 0x82}; //mac address - currently unused
 
@@ -84,7 +84,8 @@ void setup(void) {
 
   // Connects ESP to network
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, pword);
+  WiFi.begin(ssid); 
+  //WiFi.begin(ssid, pword);
 
   // Waits while connecting
   while(WiFi.status() != WL_CONNECTED) {
@@ -168,7 +169,7 @@ void loop(void) {
   }
 
   // Delay sets data reading rate. Too fast overwhelms server and results in crashing
-  delay(2.5);
+  delay(4);
 
   
   //displayData(gyro_event, accelmag_event);
