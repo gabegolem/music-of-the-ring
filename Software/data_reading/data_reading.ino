@@ -22,6 +22,7 @@ struct_readings readings;
 char * readings_bytes;
 
 //Network Info
+//const char* ssid = "David’s iPhone (6)";
 const char* ssid = "bucknell_iot";
 const char* pword = "";
 const char* host = "10.98.148.138"; 
@@ -169,7 +170,7 @@ void loop(void) {
   }
 
   // Delay sets data reading rate. Too fast overwhelms server and results in crashing
-  delay(4);
+  delay(2.5);
 
   
   //displayData(gyro_event, accelmag_event);

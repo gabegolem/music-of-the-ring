@@ -4,7 +4,7 @@ import csv
 from collections import deque
 import time
 
-NUM_READINGS = 25              #Readings per punch
+NUM_READINGS = 40              #Readings per punch
 NUM_READINGS_AFTER = 5        #Number of readings following impact 
 PIEZO_THRESHOLD = 500         #Threshold to register/record a punch 
 CSV = "../modeling/sample.csv" #"../modeling/profiles/test_profile/data/right_hook.csv"
@@ -48,7 +48,7 @@ def displayData(unpacked_data):
 
 while True:
     client_socket, client_address = server_socket.accept()
-    #print("Accepted")
+    print(f"Accepted: {client_address}")
     try:
         data_bytes = client_socket.recv(56)                      #Receives struct_size bytes
         unpacked_data = struct.unpack(format_string, data_bytes) #Unpacks into list of floats

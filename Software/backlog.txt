@@ -6,7 +6,8 @@ Needs
         rather than relying on piezo impact to indicate a punch
         probably not too hard to implement once modelling 
         is demonstrated to be effective
-    
+    2. Change TCP sockets to ESP Now
+        This shit ain't fast enough
 Qualtiy of Life
 
     data_reading
