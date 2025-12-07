@@ -5,7 +5,6 @@
 string samples[];
 */
 
-me.dir() + "../data_reading/named_pipe.fifo" => string named_pipe_path;
 // Add your .wav file paths to the array
 // Make sure to use forward slashes in the path, even on Windows
 FileIO sound_dir;
@@ -19,17 +18,14 @@ for (int i; i < sound_files.size(); i++){
 
 sound_dir.close();
 
-FileIO named_pipe;
-named_pipe.open(named_pipe_path, FileIO.READ);
+OscIn receiver;
+8000 => int port;
+if (!receiver.port(port)) <<< "ERROR" >>>;
+receiver.addAddress("/boxing/data_reading");
+receiver.listenAll();
+OscMsg msg;
 
-string line;
-StringTokenizer tokenizer;
-tokenizer.delims(", ");
-
-int token_index;
-float accel[6];
-float piezo;
-int timestamp;
+float data_reading[8];
 // Seed the random number generator (optional, but good practice)
 // Using now::ms as a seed ensures a different sequence each run
 //now::ms() => Std.srandom;
@@ -42,29 +38,12 @@ SndBuf buffer => Bitcrusher crush => JCRev rev => dac;
 0.7 => crush.gain;
 
 // Loop indefinitely to play random files
-fun playRandomFile() {
-   
-    named_pipe.readLine() => line;
-    <<< line >>>;
+fun playRandomFile(float data[]) { 
     
-    if (line == null) {
-        <<< "pipe other end is closed" >>>;
-        me.exit();
+    for (int i; i < data.size(); i++) {
+        <<< data[i] >>>;
     }
 
-    tokenizer.set(line);
-    Std.atof(tokenizer.get(0)) => accel[0];
-    Std.atof(tokenizer.get(1)) => accel[1];
-    Std.atof(tokenizer.get(2)) => accel[2];
-    Std.atof(tokenizer.get(3)) => accel[3];
-    Std.atof(tokenizer.get(4)) => accel[4];
-    Std.atof(tokenizer.get(5)) => accel[5];
-    Std.atof(tokenizer.get(6)) => piezo;
-    Std.atoi(tokenizer.get(7)) => timestamp;
-    
-    <<< piezo >>>;
-    <<< timestamp >>>;
-    
     /*
            
     // Generate a random index between 0 and the last index of the array
@@ -87,11 +66,20 @@ fun playRandomFile() {
     // The "now" keyword advances time by the buffer length
     buffer.length() => now;
     */
-    1::ms => now;
 }
 
 while (true) {
-    playRandomFile();
+   
+    receiver => now;
+    
+    while (receiver.recv(msg)) {
+        if (msg.address == "/boxing/data_reading") { 
+            for (int i; i < data_reading.size(); i++) {
+                msg.getFloat(i) => data_reading[i];
+            }
+            playRandomFile(data_reading);
+        }
+    }
 }
 
 /*

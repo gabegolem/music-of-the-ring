@@ -6,6 +6,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <SPI.h>
+#include <OSCMessage.h>
 
 int piezo_pin = A0;
 
@@ -18,21 +19,24 @@ typedef struct __attribute__((packed)) struct_readings {
     double gyro_y;
     double gyro_z;
     double piezo;
-    unsigned long timestamp;
+    double timestamp;
 } struct_readings;
 
 struct_readings readings;
 uint8_t * readings_bytes;
-int write_byte_count = 7 * sizeof(double) + sizeof(unsigned long);
+int write_byte_count = 8 * sizeof(double);
 
-WiFiUDP Udp;
+WiFiUDP udp;
+
+double timestamp;
+unsigned long milliseconds;
 
 //Network Info
 const char* ssid = "David’s iPhone (6)";
 //const char* ssid = "bucknell_iot";
 const char* pword = "mybdrppas4atz";
 const char* host = "172.20.10.3"; 
-const uint16_t port = 8000;
+const unsigned port = 8000;
 uint8_t broadcastAddress[] = {0xdc, 0x21, 0x48, 0x82, 0x96, 0x82}; //mac address - currently unused
 
 // Initialize both accelerometer and gyroscope components of the IMU
@@ -46,12 +50,13 @@ void setup(void) {
   WiFi.mode(WIFI_STA);
   //WiFi.begin(ssid); 
   Serial.print("\nWifi_status: "); Serial.print(WiFi.begin(ssid, pword));
-  Serial.print("\nUDP_status: "); Serial.print(Udp.begin(4000));
   // Waits while connecting
   while(WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print("_");
   }
+
+  udp.begin(4000);
 
   //Displays network ssid upon connecting
   Serial.println("");
@@ -106,23 +111,47 @@ void loop(void) {
   gyro.getEvent(&gyro_event);
 
   // writes imu data to struct
-  readings.gyro_x = gyro_event.gyro.x;
-  readings.gyro_y = gyro_event.gyro.y;
-  readings.gyro_z = gyro_event.gyro.z;
-  readings.acceleration_x = accelmag_event.acceleration.x;
-  readings.acceleration_y = accelmag_event.acceleration.y;
-  readings.acceleration_z = accelmag_event.acceleration.z;
-  readings.piezo = analogRead(piezo_pin);
-  readings.timestamp = millis();
-  readings_bytes = reinterpret_cast<uint8_t*>(&readings); //converts struct data types to raw bytes
-  // Attempts to send bytes to server
-  Udp.beginPacket(host, port);
-  Udp.write(readings_bytes, write_byte_count);
-  Udp.endPacket();
+  milliseconds = millis();
+  timestamp = 0;
+  sendData("/boxing/data_reading",
+            accelmag_event.acceleration.x,
+            accelmag_event.acceleration.y,
+            accelmag_event.acceleration.z,
+            gyro_event.gyro.x,
+            gyro_event.gyro.y,
+            gyro_event.gyro.z,
+            analogRead(piezo_pin),
+            timestamp);
 
   // Delay sets data reading rate. Too fast overwhelms server and results in crashing
   delay(5);
-  //displayData(gyro_event, accelmag_event);
+  displayData(gyro_event, accelmag_event);
+}
+
+void sendData(const char* address,
+              double ax, 
+              double ay, 
+              double az, 
+              double gx, 
+              double gy, 
+              double gz, 
+              double piezo, 
+              double timestamp) {
+                OSCMessage msg(address);
+                
+                msg.add( (float) ax);
+                msg.add( (float) ay);
+                msg.add( (float) az);
+                msg.add( (float) gx);
+                msg.add( (float) gy);
+                msg.add( (float) gz);
+                msg.add( (float) piezo);
+                msg.add( (float) timestamp);
+                
+                udp.beginPacket(host, port);
+                msg.send(udp);
+                udp.endPacket();
+                msg.empty();
 }
 
 // Displays data reading to serial for debugging purposes
