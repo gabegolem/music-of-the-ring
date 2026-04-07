@@ -21,7 +21,7 @@ csv_writer = csv.writer(csv_file, delimiter=',', lineterminator='\n')
 
 '''Sets up tcp socket communication'''
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-address = ("10.98.148.138", 8000)
+address = ("127.0.0.1", 8000)
 server_socket.bind(address)
 print("Listening...")
 server_socket.listen(1)

@@ -7,11 +7,16 @@
 #include <WiFiUdp.h>
 #include <SPI.h>
 #include <OSCMessage.h>
+#include <cppQueue.h>
 
-int piezo_pin = A0;
+#define OVERWRITE true
 
-//Struct to store/send data
-typedef struct __attribute__((packed)) struct_readings {
+//Board/Pins
+int piezo_pin = A2;
+
+
+//Data
+typedef struct __attribute__((packed)) struct_reading {
     double acceleration_x;
     double acceleration_y;
     double acceleration_z;
@@ -20,24 +25,28 @@ typedef struct __attribute__((packed)) struct_readings {
     double gyro_z;
     double piezo;
     double timestamp;
-} struct_readings;
-
-struct_readings readings;
-uint8_t * readings_bytes;
-int write_byte_count = 8 * sizeof(double);
-
-WiFiUDP udp;
+} struct_reading;
 
 double timestamp;
-unsigned long milliseconds;
+double piezo;
+struct_reading reading;
 
-//Network Info
-const char* ssid = "David’s iPhone (6)";
+
+//Queue
+cppQueue data_queue(sizeof(struct_reading), 20, FIFO, OVERWRITE);
+
+//Network
+WiFiUDP udp;
+char *address = "/boxing/data_reading";
+OSCMessage msg(address);
+//OSCMessage testmsg(address);
+
+const char* ssid = "EAE";
 //const char* ssid = "bucknell_iot";
-const char* pword = "mybdrppas4atz";
-const char* host = "172.20.10.3"; 
+const char* pword = "";
+const char* host = "192.168.50.197"; 
 const unsigned port = 8000;
-uint8_t broadcastAddress[] = {0xdc, 0x21, 0x48, 0x82, 0x96, 0x82}; //mac address - currently unused
+
 
 // Initialize both accelerometer and gyroscope components of the IMU
 Adafruit_FXOS8700 accelmag = Adafruit_FXOS8700(0x8700A, 0x8700B);
@@ -49,7 +58,8 @@ void setup(void) {
   // Connects ESP to network
   WiFi.mode(WIFI_STA);
   //WiFi.begin(ssid); 
-  Serial.print("\nWifi_status: "); Serial.print(WiFi.begin(ssid, pword));
+  Serial.print("\nWifi_status: "); 
+  WiFi.begin(ssid);
   // Waits while connecting
   while(WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -61,6 +71,7 @@ void setup(void) {
   //Displays network ssid upon connecting
   Serial.println("");
   Serial.println(WiFi.SSID());
+
 
   /* Wait for the Serial Monitor */
   while (!Serial) {
@@ -111,25 +122,49 @@ void loop(void) {
   gyro.getEvent(&gyro_event);
 
   // writes imu data to struct
-  milliseconds = millis();
-  timestamp = 0;
-  sendData("/boxing/data_reading",
-            accelmag_event.acceleration.x,
+  timestamp = (micros() / 1000.0);
+  piezo = analogRead(piezo_pin);
+
+
+  if (piezo > 1000) {
+    sendData(accelmag_event.acceleration.x,
             accelmag_event.acceleration.y,
             accelmag_event.acceleration.z,
             gyro_event.gyro.x,
             gyro_event.gyro.y,
             gyro_event.gyro.z,
-            analogRead(piezo_pin),
+            piezo,
             timestamp);
-
-  // Delay sets data reading rate. Too fast overwhelms server and results in crashing
-  delay(5);
-  displayData(gyro_event, accelmag_event);
+  }
+  displayDataNormal(accelmag_event, gyro_event);
 }
 
-void sendData(const char* address,
-              double ax, 
+/*
+void sendTest(float t) {
+  
+  testmsg.add(t);
+  udp.beginPacket(host,port);
+  testmsg.send(udp);
+  udp.endPacket();
+  testmsg.empty();
+}
+*/
+
+struct_reading getReading(sensors_event_t accelmag_event, sensors_event_t gyro_event) {
+  struct_reading new_reading;
+  new_reading.acceleration_x = accelmag_event.acceleration.x;
+  new_reading.acceleration_y = accelmag_event.acceleration.y;
+  new_reading.acceleration_z = accelmag_event.acceleration.z;
+  new_reading.gyro_x = gyro_event.gyro.x;
+  new_reading.gyro_y = gyro_event.gyro.y;
+  new_reading.gyro_z = gyro_event.gyro.z;
+  new_reading.piezo = piezo;
+  new_reading.timestamp = timestamp;
+  return new_reading;
+}
+
+//Creates and sends OSC packet
+void sendData(double ax, 
               double ay, 
               double az, 
               double gx, 
@@ -137,7 +172,6 @@ void sendData(const char* address,
               double gz, 
               double piezo, 
               double timestamp) {
-                OSCMessage msg(address);
                 
                 msg.add( (float) ax);
                 msg.add( (float) ay);
@@ -148,14 +182,24 @@ void sendData(const char* address,
                 msg.add( (float) piezo);
                 msg.add( (float) timestamp);
                 
-                udp.beginPacket(host, port);
+                Serial.println(udp.beginPacket(host, port));
                 msg.send(udp);
-                udp.endPacket();
+                Serial.println(udp.endPacket());
                 msg.empty();
 }
 
 // Displays data reading to serial for debugging purposes
-void displayData(sensors_event_t gyro_event, sensors_event_t accelmag_event) {
+void displayDataFancy(sensors_event_t accelmag_event, sensors_event_t gyro_event) {
+  Serial.print("ACCELERATION  ");
+  Serial.print("X: ");
+  Serial.print(accelmag_event.acceleration.x);
+  Serial.print("  ");
+  Serial.print("Y: ");
+  Serial.print(accelmag_event.acceleration.y);
+  Serial.print("  ");
+  Serial.print("Z: ");
+  Serial.print(accelmag_event.acceleration.z);
+  Serial.print("  ");
   Serial.print("GYRO  ");
   Serial.print("X: ");
   Serial.print(gyro_event.gyro.x);
@@ -167,18 +211,31 @@ void displayData(sensors_event_t gyro_event, sensors_event_t accelmag_event) {
   Serial.print(gyro_event.gyro.z);
   Serial.print("  ");
   Serial.println("rad/s ");
-  Serial.print("ACCELERATION  ");
-  Serial.print("X: ");
-  Serial.print(accelmag_event.acceleration.x);
-  Serial.print("  ");
-  Serial.print("Y: ");
-  Serial.print(accelmag_event.acceleration.y);
-  Serial.print("  ");
-  Serial.print("Z: ");
-  Serial.print(accelmag_event.acceleration.z);
-  Serial.print("  ");
   Serial.println("m/s^2");
+  Serial.print("PIEZO: ");
+  Serial.println(piezo);
+  Serial.print("TIMESTAMP: ");
+  Serial.println(timestamp);
 }
+
+void displayDataNormal(sensors_event_t accelmag_event, sensors_event_t gyro_event) {
+  Serial.print(accelmag_event.acceleration.x);
+  Serial.print(",");
+  Serial.print(accelmag_event.acceleration.y);
+  Serial.print(",");
+  Serial.print(accelmag_event.acceleration.z);
+  Serial.print(",");
+  Serial.print(gyro_event.gyro.x);
+  Serial.print(",");
+  Serial.print(gyro_event.gyro.y);
+  Serial.print(",");
+  Serial.print(gyro_event.gyro.z);
+  Serial.print(",");
+  Serial.print(piezo);
+  Serial.print(",");
+  Serial.println(timestamp);
+}
+
 
 // prints stats of sensor components
 void displaySensorDetails(void) {
@@ -186,26 +243,8 @@ void displaySensorDetails(void) {
   sensor_t gyro_sensor;
   sensor_t accelmag_sensor;
 
-  gyro.getSensor(&gyro_sensor);
   accelmag.getSensor(&accelmag_sensor);
-  Serial.println("------------------------------------");
-  Serial.print("Gyro-Sensor:       ");
-  Serial.println(gyro_sensor.name);
-  Serial.print("Driver Ver:   ");
-  Serial.println(gyro_sensor.version);
-  Serial.print("Unique ID:    0x");
-  Serial.println(gyro_sensor.sensor_id, HEX);
-  Serial.print("Max Value:    ");
-  Serial.print(gyro_sensor.max_value);
-  Serial.println(" rad/s");
-  Serial.print("Min Value:    ");
-  Serial.print(gyro_sensor.min_value);
-  Serial.println(" rad/s");
-  Serial.print("Resolution:   ");
-  Serial.print(gyro_sensor.resolution);
-  Serial.println(" rad/s");
-  Serial.println("------------------------------------");
-  Serial.println("");
+  gyro.getSensor(&gyro_sensor);
   Serial.println("------------------------------------");
   Serial.print("Accelmag-Sensor:       ");
   Serial.println(accelmag_sensor.name);
@@ -222,6 +261,24 @@ void displaySensorDetails(void) {
   Serial.print("Resolution:   ");
   Serial.print(accelmag_sensor.resolution);
   Serial.println(" m/s^2");
+  Serial.println("------------------------------------");
+  Serial.println("");
+  Serial.println("------------------------------------");
+  Serial.print("Gyro-Sensor:       ");
+  Serial.println(gyro_sensor.name);
+  Serial.print("Driver Ver:   ");
+  Serial.println(gyro_sensor.version);
+  Serial.print("Unique ID:    0x");
+  Serial.println(gyro_sensor.sensor_id, HEX);
+  Serial.print("Max Value:    ");
+  Serial.print(gyro_sensor.max_value);
+  Serial.println(" rad/s");
+  Serial.print("Min Value:    ");
+  Serial.print(gyro_sensor.min_value);
+  Serial.println(" rad/s");
+  Serial.print("Resolution:   ");
+  Serial.print(gyro_sensor.resolution);
+  Serial.println(" rad/s");
   Serial.println("------------------------------------");
   delay(500);
 }

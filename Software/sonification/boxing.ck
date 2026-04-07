@@ -7,6 +7,8 @@ string samples[];
 
 // Add your .wav file paths to the array
 // Make sure to use forward slashes in the path, even on Windows
+<<<"HIT>>>;
+
 FileIO sound_dir;
 me.dir() + "sound_files/" => string sound_file_path;
 sound_dir.open(sound_file_path, FileIO.READ);
@@ -20,7 +22,7 @@ sound_dir.close();
 
 OscIn receiver;
 8000 => int port;
-if (!receiver.port(port)) <<< "ERROR" >>>;
+if (!receiver.port(port)) <<< "ERROR Port Failed" >>>;
 receiver.addAddress("/boxing/data_reading");
 receiver.listenAll();
 OscMsg msg;
@@ -29,30 +31,35 @@ float data_reading[8];
 // Seed the random number generator (optional, but good practice)
 // Using now::ms as a seed ensures a different sequence each run
 //now::ms() => Std.srandom;
-1 => Math.srandom;
+2 => Math.srandom;
 
 // Create a SndBuf object to load and play the audio
-SndBuf buffer => Bitcrusher crush => JCRev rev => dac;
-0.8 => buffer.gain;
-0.7 => rev.gain;
-0.7 => crush.gain;
+SndBuf buffer => LPF lpf => Bitcrusher crush => JCRev rev => dac;
+1 => buffer.gain;
+1 => rev.gain;
+0.9 => crush.gain;
 
 // Loop indefinitely to play random files
 fun playRandomFile(float data[]) { 
-    
     for (int i; i < data.size(); i++) {
         <<< data[i] >>>;
     }
-
-    /*
-           
+    
+    crush.bits((data[6] / 128) $ int);
+    crush.downsampleFactor(1 + ((data[6]) $ int) / 1000);
+        
+    (80 - (((Std.fabs(data[0]) + Std.fabs(data[1]) + Std.fabs(data[2])) $ int) / 3)) / 80 => rev.mix;
+    
+    (20000 - ((6 - Std.fabs(data[5])) $ int) * 3333) => lpf.freq;      
     // Generate a random index between 0 and the last index of the array
     // Math.random2(min, max) generates an integer in the range [min, max]
     Math.random2(0, samples.size() - 1) => int randomIndex;
 
     // Get the random file path from the array
     samples[randomIndex] => string randomFile;
-
+    
+    if (data[6] > 4000) me.dir() + "sound_files/strong_cross_1.wav" => randomFile;
+    else if (data[6] < 1500) me.dir() + "sound_files/weak_cross_jab_1.wav" => randomFile;
     // Load the randomly selected file into the buffer
     randomFile => buffer.read;
 
@@ -65,102 +72,56 @@ fun playRandomFile(float data[]) {
     // Wait for the duration of the sample before the next iteration
     // The "now" keyword advances time by the buffer length
     buffer.length() => now;
-    */
+}
+
+SndBuf ambience_buffer0 => NRev rev0 => dac;
+SndBuf ambience_buffer1 => NRev rev1 => dac;
+SndBuf ambience_buffer2 => NRev rev2 => dac;
+SndBuf ambience_buffer3 => NRev rev3 => dac;
+
+me.dir() + "sound_files/ambience_1.wav" => ambience_buffer0.read;
+me.dir() + "sound_files/ambience_1_1.wav" => ambience_buffer1.read;
+me.dir() + "sound_files/ambience_2_1.wav" => ambience_buffer2.read;
+me.dir() + "sound_files/ambience_3_1.wav" => ambience_buffer3.read;
+
+SndBuf ambience_buffers[4];
+ambience_buffers[0] => ambience_buffer0;
+ambience_buffers[1] => ambience_buffer1;
+ambience_buffers[2] => ambience_buffer2;
+ambience_buffers[3] => ambience_buffer3;
+
+0.01 => rev0.mix;
+0.01 => rev1.mix;
+0.01 => rev2.mix;
+0.01 => rev3.mix;
+
+0.0 => rev0.gain;
+0.0 => rev1.gain;
+0.0 => rev2.gain;
+0.0 => rev3.gain;
+
+fun playAmbience(SndBuf buf) {        
+   buf.samples() => buf.pos;
+   0 => buf.pos;
+   buf.length() => now;
+} 
+
+for (int i; i < ambience_buffers.size(); i++) {
+    spork ~ playAmbience(ambience_buffers[i]);
 }
 
 while (true) {
-   
+
+
     receiver => now;
     
     while (receiver.recv(msg)) {
+        <<< "hit">>>;
         if (msg.address == "/boxing/data_reading") { 
             for (int i; i < data_reading.size(); i++) {
                 msg.getFloat(i) => data_reading[i];
             }
-            playRandomFile(data_reading);
+            spork ~ playRandomFile(data_reading);
         }
     }
 }
-
-/*
-
-//with reverb
-
-// ... (file array and random selection code goes here) ...
-
-// Create the audio buffer unit generator
-SndBuf buffer;
-
-// Create an effects unit generator (e.g., a simple reverb)
-JCRev reverb => dac;
-
-// Patch the buffer THROUGH the reverb unit, then to the DAC
-buffer => reverb => dac;
-
-// Load and read the selected WAV file into the buffer
-"path/to/your/file1.wav" => buffer.read; // Use your actual file path variable here
-
-// Configure the effect parameters (e.g., set the reverb mix/room size)
-0.5 => reverb.mix; // Mix between wet and dry signal (0.0 to 1.0)
-
-// Play the entire length of the audio file and wait until it finishes
-buffer.length() => now; 
-// Note: JCRev automatically adds a decay time after the buffer finishes playing.
-// The script will wait until the reverb tail naturally fades out.
-
-//Use code with caution.
-
-*/
-
-/*
-
-//with distortion 
-
-​// Define an array of strings containing the paths to your WAV files
-string wavFiles[] = {
-    "path/to/your/file1.wav",
-    "path/to/your/file2.wav",
-    "path/to/your/file3.wav",
-    "path/to/your/file4.wav"
-};
-
-// Seed the random number generator
-now / 1::samp => int seed;
-Math.srandom(seed);
-
-// Create the audio buffer unit generator
-SndBuf buffer;
-
-// Create the distortion effect unit generator
-Bitcrusher crush;
-
-// Patch the signal flow: buffer -> distortion -> dac
-buffer => crush => dac;
-
-// Generate a random integer between 0 and the number of files minus 1
-Math.random2(0, wavFiles.size() - 1) => int randomIndex;
-
-// Get the random file path from the array
-wavFiles[randomIndex] => string fileToPlay;
-
-// Load and read the selected WAV file into the buffer
-fileToPlay => buffer.read;
-
-// --- Configure the distortion parameters ---
-// Lower bits mean harsher quantization noise (more distortion)
-8 => crush.bits; // Reduce sample width to 8 bits (default is 32)
-
-// Higher downsample factor means lower sample rate (more aliasing/distortion)
-4 => crush.downsampleFactor; // Downsample by a factor of 4
-
-// You might need to adjust the gain to avoid digital clipping, as distortion increases volume
-// All UGens have a .gain() function
-0.8 => buffer.gain;
-0.7 => crush.gain;
-
-// Play the entire length of the audio file and wait until it finishes
-buffer.length() => now;
-
-*/
-
-// The script ends here
