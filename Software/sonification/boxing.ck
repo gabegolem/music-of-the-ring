@@ -7,7 +7,6 @@ string samples[];
 
 // Add your .wav file paths to the array
 // Make sure to use forward slashes in the path, even on Windows
-<<<"HIT>>>;
 
 FileIO sound_dir;
 me.dir() + "sound_files/" => string sound_file_path;
@@ -21,13 +20,13 @@ for (int i; i < sound_files.size(); i++){
 sound_dir.close();
 
 OscIn receiver;
-8000 => int port;
+8001 => int port;
 if (!receiver.port(port)) <<< "ERROR Port Failed" >>>;
-receiver.addAddress("/boxing/data_reading");
+receiver.addAddress("/sonification");
 receiver.listenAll();
 OscMsg msg;
 
-float data_reading[8];
+float data_reading[9];
 // Seed the random number generator (optional, but good practice)
 // Using now::ms as a seed ensures a different sequence each run
 //now::ms() => Std.srandom;
@@ -58,8 +57,6 @@ fun playRandomFile(float data[]) {
     // Get the random file path from the array
     samples[randomIndex] => string randomFile;
     
-    if (data[6] > 4000) me.dir() + "sound_files/strong_cross_1.wav" => randomFile;
-    else if (data[6] < 1500) me.dir() + "sound_files/weak_cross_jab_1.wav" => randomFile;
     // Load the randomly selected file into the buffer
     randomFile => buffer.read;
 
@@ -109,15 +106,13 @@ fun playAmbience(SndBuf buf) {
 for (int i; i < ambience_buffers.size(); i++) {
     spork ~ playAmbience(ambience_buffers[i]);
 }
-
 while (true) {
-
 
     receiver => now;
     
     while (receiver.recv(msg)) {
         <<< "hit">>>;
-        if (msg.address == "/boxing/data_reading") { 
+        if (msg.address == "/sonification") { 
             for (int i; i < data_reading.size(); i++) {
                 msg.getFloat(i) => data_reading[i];
             }

@@ -10,7 +10,7 @@ input_file = "raw.csv"
 output_file = "data.csv"
 
 CONTEXT_LINES = 20
-PIEZO_THRESHOLD = 1000
+PIEZO_THRESHOLD = 300
 buffer = deque(maxlen=CONTEXT_LINES)  # Holds up to 20 preceding lines (including current)
 count = 0
 cooldown = 0

@@ -37,7 +37,7 @@ cppQueue data_queue(sizeof(struct_reading), 20, FIFO, OVERWRITE);
 
 //Network
 WiFiUDP udp;
-char *address = "/boxing/data_reading";
+char *address = "/modeling";
 OSCMessage msg(address);
 //OSCMessage testmsg(address);
 
@@ -56,8 +56,8 @@ void setup(void) {
   Serial.begin(115200);
 
   // Connects ESP to network
+  
   WiFi.mode(WIFI_STA);
-  //WiFi.begin(ssid); 
   Serial.print("\nWifi_status: "); 
   WiFi.begin(ssid);
   // Waits while connecting
@@ -67,12 +67,12 @@ void setup(void) {
   }
 
   udp.begin(4000);
-
+  
   //Displays network ssid upon connecting
   Serial.println("");
   Serial.println(WiFi.SSID());
 
-
+  
   /* Wait for the Serial Monitor */
   while (!Serial) {
     delay(1);
@@ -125,8 +125,8 @@ void loop(void) {
   timestamp = (micros() / 1000.0);
   piezo = analogRead(piezo_pin);
 
-
-  if (piezo > 1000) {
+  
+  if (piezo > 200) {
     sendData(accelmag_event.acceleration.x,
             accelmag_event.acceleration.y,
             accelmag_event.acceleration.z,
@@ -135,11 +135,13 @@ void loop(void) {
             gyro_event.gyro.z,
             piezo,
             timestamp);
+    delay(50);
   }
+  
   displayDataNormal(accelmag_event, gyro_event);
 }
 
-/*
+/*                                         
 void sendTest(float t) {
   
   testmsg.add(t);
