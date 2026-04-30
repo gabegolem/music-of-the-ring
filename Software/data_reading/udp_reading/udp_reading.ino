@@ -7,42 +7,21 @@
 #include <WiFiUdp.h>
 #include <SPI.h>
 #include <OSCMessage.h>
-#include <cppQueue.h>
 
-#define OVERWRITE true
+#define DEBUGMODE false;
 
 //Board/Pins
 int piezo_pin = A2;
 
-
-//Data
-typedef struct __attribute__((packed)) struct_reading {
-    double acceleration_x;
-    double acceleration_y;
-    double acceleration_z;
-    double gyro_x;
-    double gyro_y;
-    double gyro_z;
-    double piezo;
-    double timestamp;
-} struct_reading;
-
 double timestamp;
 double piezo;
-struct_reading reading;
-
-
-//Queue
-cppQueue data_queue(sizeof(struct_reading), 20, FIFO, OVERWRITE);
 
 //Network
 WiFiUDP udp;
 char *address = "/modeling";
 OSCMessage msg(address);
-//OSCMessage testmsg(address);
 
 const char* ssid = "EAE";
-//const char* ssid = "bucknell_iot";
 const char* pword = "";
 const char* host = "192.168.50.197"; 
 const unsigned port = 8000;
@@ -107,9 +86,6 @@ void setup(void) {
   accelmag.setAccelRange(ACCEL_RANGE_8G);
   accelmag.setSensorMode(ACCEL_ONLY_MODE);
   accelmag.setOutputDataRate(ODR_800HZ);
-
-  // Displays sensor details, indicating successful setup
-  displaySensorDetails();
 }
 
 
@@ -125,8 +101,7 @@ void loop(void) {
   timestamp = (micros() / 1000.0);
   piezo = analogRead(piezo_pin);
 
-  
-  if (piezo > 200) {
+  if (piezo > 250) {
     sendData(accelmag_event.acceleration.x,
             accelmag_event.acceleration.y,
             accelmag_event.acceleration.z,
@@ -137,32 +112,9 @@ void loop(void) {
             timestamp);
     delay(50);
   }
-  
-  displayDataNormal(accelmag_event, gyro_event);
-}
-
-/*                                         
-void sendTest(float t) {
-  
-  testmsg.add(t);
-  udp.beginPacket(host,port);
-  testmsg.send(udp);
-  udp.endPacket();
-  testmsg.empty();
-}
-*/
-
-struct_reading getReading(sensors_event_t accelmag_event, sensors_event_t gyro_event) {
-  struct_reading new_reading;
-  new_reading.acceleration_x = accelmag_event.acceleration.x;
-  new_reading.acceleration_y = accelmag_event.acceleration.y;
-  new_reading.acceleration_z = accelmag_event.acceleration.z;
-  new_reading.gyro_x = gyro_event.gyro.x;
-  new_reading.gyro_y = gyro_event.gyro.y;
-  new_reading.gyro_z = gyro_event.gyro.z;
-  new_reading.piezo = piezo;
-  new_reading.timestamp = timestamp;
-  return new_reading;
+  if (DEBUGMODE) {
+    displayDataNormal(accelmag_event, gyro_event);
+  }
 }
 
 //Creates and sends OSC packet
@@ -184,40 +136,10 @@ void sendData(double ax,
                 msg.add( (float) piezo);
                 msg.add( (float) timestamp);
                 
-                Serial.println(udp.beginPacket(host, port));
+                udp.beginPacket(host, port);
                 msg.send(udp);
-                Serial.println(udp.endPacket());
+                udp.endPacket();
                 msg.empty();
-}
-
-// Displays data reading to serial for debugging purposes
-void displayDataFancy(sensors_event_t accelmag_event, sensors_event_t gyro_event) {
-  Serial.print("ACCELERATION  ");
-  Serial.print("X: ");
-  Serial.print(accelmag_event.acceleration.x);
-  Serial.print("  ");
-  Serial.print("Y: ");
-  Serial.print(accelmag_event.acceleration.y);
-  Serial.print("  ");
-  Serial.print("Z: ");
-  Serial.print(accelmag_event.acceleration.z);
-  Serial.print("  ");
-  Serial.print("GYRO  ");
-  Serial.print("X: ");
-  Serial.print(gyro_event.gyro.x);
-  Serial.print("  ");
-  Serial.print("Y: ");
-  Serial.print(gyro_event.gyro.y);
-  Serial.print("  ");
-  Serial.print("Z: ");
-  Serial.print(gyro_event.gyro.z);
-  Serial.print("  ");
-  Serial.println("rad/s ");
-  Serial.println("m/s^2");
-  Serial.print("PIEZO: ");
-  Serial.println(piezo);
-  Serial.print("TIMESTAMP: ");
-  Serial.println(timestamp);
 }
 
 void displayDataNormal(sensors_event_t accelmag_event, sensors_event_t gyro_event) {
@@ -236,51 +158,4 @@ void displayDataNormal(sensors_event_t accelmag_event, sensors_event_t gyro_even
   Serial.print(piezo);
   Serial.print(",");
   Serial.println(timestamp);
-}
-
-
-// prints stats of sensor components
-void displaySensorDetails(void) {
-
-  sensor_t gyro_sensor;
-  sensor_t accelmag_sensor;
-
-  accelmag.getSensor(&accelmag_sensor);
-  gyro.getSensor(&gyro_sensor);
-  Serial.println("------------------------------------");
-  Serial.print("Accelmag-Sensor:       ");
-  Serial.println(accelmag_sensor.name);
-  Serial.print("Driver Ver:   ");
-  Serial.println(accelmag_sensor.version);
-  Serial.print("Unique ID:    0x");
-  Serial.println(accelmag_sensor.sensor_id, HEX);
-  Serial.print("Max Value:    ");
-  Serial.print(accelmag_sensor.max_value);
-  Serial.println(" m/s^2");
-  Serial.print("Min Value:    ");
-  Serial.print(accelmag_sensor.min_value);
-  Serial.println(" m/s^2");
-  Serial.print("Resolution:   ");
-  Serial.print(accelmag_sensor.resolution);
-  Serial.println(" m/s^2");
-  Serial.println("------------------------------------");
-  Serial.println("");
-  Serial.println("------------------------------------");
-  Serial.print("Gyro-Sensor:       ");
-  Serial.println(gyro_sensor.name);
-  Serial.print("Driver Ver:   ");
-  Serial.println(gyro_sensor.version);
-  Serial.print("Unique ID:    0x");
-  Serial.println(gyro_sensor.sensor_id, HEX);
-  Serial.print("Max Value:    ");
-  Serial.print(gyro_sensor.max_value);
-  Serial.println(" rad/s");
-  Serial.print("Min Value:    ");
-  Serial.print(gyro_sensor.min_value);
-  Serial.println(" rad/s");
-  Serial.print("Resolution:   ");
-  Serial.print(gyro_sensor.resolution);
-  Serial.println(" rad/s");
-  Serial.println("------------------------------------");
-  delay(500);
 }
